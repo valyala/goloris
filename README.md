@@ -6,13 +6,12 @@ Goloris - slowloris[1] for nginx. Written in Go
 * **How it works?**
   It tries occupying and keeping busy as much tcp connections
   to the victim as possible by using as low network bandwidth as possible.
-  If goloris is lucky enough, then eventually it should occupy all available
-  connections to the victim's TCP address, so no other client could connect
-  to it.
+  If goloris is lucky enough, then eventually it should eat all available
+  connections to the victim, so no other client could connect to it.
   See the source code for more insights.
 
-* **How quickly it can take down unprotected nginx with default config?**
-  In a few minutes with default options.
+* **How quickly it can take down unprotected nginx with default setting?**
+  In a few minutes with default config options.
 
 * **How to protect nginx against goloris?**
   I know the following options:

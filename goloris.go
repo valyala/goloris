@@ -3,13 +3,12 @@
 // Q: How it works?
 // A: It tries occupying and keeping busy as much tcp connections
 // to the victim as possible by using as low network bandwidth as possible.
-// If goloris is lucky enough, then eventually it should occupy all available
-// connections to the victim's TCP address, so no other client could connect
-// to it.
+// If goloris is lucky enough, then eventually it should eat all available
+// connections to the victim, so no other client could connect to it.
 // See the source code for more insights.
 //
-// Q: How quickly it can take down unprotected nginx with default config?
-// A: In a few minutes with default options.
+// Q: How quickly it can take down unprotected nginx with default settings?
+// A: In a few minutes with default config options.
 //
 // Q: How to protect nginx against goloris?
 // A: I know the following options:
