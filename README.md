@@ -34,6 +34,11 @@ Goloris - slowloris[1] for nginx DoS
   In a few minutes with default config options.
 
 
+* **Which versions of nginx are vulnerable?**
+
+  All up to 1.5.9 if unprotected as described below (i.e. with default config).
+
+
 * **How to protect nginx against goloris?**
 
   I know the following options:
