@@ -1,4 +1,4 @@
-Goloris - slowloris[1] for nginx
+Goloris - slowloris[1] for nginx DoS
 ===============================================
 
 ## FAQ
