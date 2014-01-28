@@ -119,6 +119,8 @@ func activeConnectionsCounter(ch <-chan int) {
 }
 
 func dialVictim(hostPort string) io.ReadWriteCloser {
+	// TODO hint: add support for dialing the victim via a random proxy
+	// from the given pool.
 	conn, err := net.Dial("tcp", hostPort)
 	if err != nil {
 		log.Printf("Couldn't esablish connection to [%s]: [%s]\n", hostPort, err)
