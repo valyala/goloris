@@ -10,7 +10,7 @@ Goloris - slowloris[1] for nginx. Written in Go
   connections to the victim, so no other client could connect to it.
   See the source code for more insights.
 
-* **How quickly it can take down unprotected nginx with default setting?**
+* **How quickly it can take down unprotected nginx with default settings?**
   In a few minutes with default config options.
 
 * **How to protect nginx against goloris?**

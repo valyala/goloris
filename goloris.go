@@ -46,13 +46,13 @@ import (
 )
 
 var (
-	contentLength    = flag.Int("contentLength", 1000*1000, "The maximum length of fake POST body in bytes. Adjust to client_max_body_size")
+	contentLength    = flag.Int("contentLength", 1000*1000, "The maximum length of fake POST body in bytes. Adjust to nginx's client_max_body_size")
 	dialWorkersCount = flag.Int("dialWorkersCount", 10, "The number of workers simultaneously busy with opening new TCP connections")
 	goMaxProcs       = flag.Int("goMaxProcs", runtime.NumCPU(), "The maximum number of CPUs to use. Don't touch :)")
-	rampUpInterval   = flag.Duration("rampUpInterval", time.Second, "Interval between new connections' acquisitions for a single dial workers (see dialWorkersCount)")
-	sleepInterval    = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to client_body_timeout")
+	rampUpInterval   = flag.Duration("rampUpInterval", time.Second, "Interval between new connections' acquisitions for a single dial worker (see dialWorkersCount)")
+	sleepInterval    = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to nginx's client_body_timeout")
 	testDuration     = flag.Duration("testDuration", time.Hour, "Test duration")
-	victimUrl        = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url (must support http POST)")
+	victimUrl        = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url. Http POST must be allowed in nginx config for this url")
 )
 
 var (
