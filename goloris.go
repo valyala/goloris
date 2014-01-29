@@ -38,14 +38,9 @@ var (
 
 func main() {
 	flag.Parse()
-
-	fmt.Printf("contentLength=%d\n", *contentLength)
-	fmt.Printf("dialWorkersCount=%d\n", *dialWorkersCount)
-	fmt.Printf("goMaxProcs=%d\n", *goMaxProcs)
-	fmt.Printf("rampUpInterval=%s\n", *rampUpInterval)
-	fmt.Printf("sleepInterval=%s\n", *sleepInterval)
-	fmt.Printf("testDuration=%s\n", *testDuration)
-	fmt.Printf("victimUrl=%s\n", *victimUrl)
+	flag.VisitAll(func (f *flag.Flag) {
+		fmt.Printf("%s=%v\n", f.Name, f.Value)
+	})
 
 	runtime.GOMAXPROCS(*goMaxProcs)
 
