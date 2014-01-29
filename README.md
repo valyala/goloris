@@ -1,4 +1,4 @@
-Goloris - slowloris[1] for nginx
+Goloris - slowloris[1] for nginx DoS
 ===============================================
 
 ## FAQ
@@ -32,6 +32,11 @@ Goloris - slowloris[1] for nginx
 * **How quickly it can take down unprotected nginx with default settings?**
 
   In a few minutes with default config options.
+
+
+* **Which versions of nginx are vulnerable?**
+
+  All up to 1.5.9 if unprotected as described below (i.e. with default config).
 
 
 * **How to protect nginx against goloris?**
