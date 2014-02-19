@@ -112,6 +112,7 @@ func dialVictim(hostPort string, isTls bool) io.ReadWriteCloser {
 
 	tlsConn := tls.Client(conn, tlsConfig)
 	if err = tlsConn.Handshake(); err != nil {
+		conn.Close()
 		log.Printf("Couldn't establish tls connection to [%s]: [%s]\n", hostPort, err)
 		return nil
 	}
